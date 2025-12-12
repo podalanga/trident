@@ -1,0 +1,101 @@
+#for building docker in it
+docker build -t trident:latest -f Dockerfile .
+
+
+# i used a really bad method that is -v /dev:=/dev
+
+# Option A: Specific device (RECOMMENDED - more secure)
+docker run -it --rm \
+  --name trident_container \
+  --privileged \
+  --device=/dev/ttyUSB0 \
+  --network host \
+  --ipc=host \
+  --pid=host \
+  --env DISPLAY=$DISPLAY \
+  --env QT_X11_NO_MITSHM=1 \
+  --env ROS_DOMAIN_ID=0 \
+  --env RMW_IMPLEMENTATION=rmw_cyclonedds_cpp \
+  --volume /tmp/.X11-unix:/tmp/.X11-unix:rw \
+  --volume $HOME/.Xauthority:/home/ros/.Xauthority:rw \
+  --volume /home/thakkali/Codes/ros/trident:/home/ros/trident:rw \
+  --user $(id -u):$(id -g) \
+  trident:latest
+
+# Option B: Mount all devices (easier for multiple devices, less secure) (use this for now)
+docker run -it --rm \
+  --name trident_container \
+  --privileged \
+  --volume /dev:/dev \
+  --network host \
+  --ipc=host \
+  --pid=host \
+  --volume /home/thakkali/Codes/ros/trident:/home/ros/trident:rw \
+  --env DISPLAY=$DISPLAY \
+  --env QT_X11_NO_MITSHM=1 \
+  --env ROS_DOMAIN_ID=0 \
+  --env RMW_IMPLEMENTATION=rmw_cyclonedds_cpp \
+  --volume /tmp/.X11-unix:/tmp/.X11-unix:rw \
+  --volume $HOME/.Xauthority:/home/ros/.Xauthority:rw \
+  --user $(id -u):$(id -g) \
+  trident:latest
+
+
+change this folder please
+  --volume /home/thakkali/Codes/ros/trident:/home/ros/trident:rw \
+
+
+
+
+
+# Option 1: Manual commands (need two terminals)
+ros2 run rplidar_ros rplidar_composition --ros-args \
+   -p serial_port:=/dev/ttyUSB0 \
+   -p serial_baudrate:=115200 \
+   -p frame_id:=laser \
+   -p angle_compensate:=true
+
+# In separate terminal - publish static transform (map to base_link, NOT to lidar):
+ros2 run tf2_ros static_transform_publisher 0 0 0 0 0 0 map base_link
+
+# OR if you just want to visualize without map frame:
+# Set RViz2 Fixed Frame to "laser" directly (no transform needed)
+
+note change the base_link to laser
+
+
+# Option 2: Using launch file (ONE command, does everything automatically)
+ros2 launch /home/ros/rplidar_launch.py
+
+
+# ==================== INTEL REALSENSE D435i ====================
+
+# Test RealSense camera detection
+rs-enumerate-devices
+
+# Launch RealSense camera node (basic)
+ros2 launch realsense2_camera rs_launch.py
+
+# If you get TF errors in RViz2, publish a transform (in separate terminal):
+#ros2 run tf2_ros static_transform_publisher 0 0 0 0 0 0 map camera_link
+
+# Launch RealSense with specific settings (depth + RGB + IMU)
+ros2 launch realsense2_camera rs_launch.py \
+  enable_depth:=true \
+  enable_color:=true \
+  enable_infra1:=true \
+  enable_infra2:=true \
+  enable_gyro:=true \
+  enable_accel:=true \
+  unite_imu_method:=1\
+  pointcloud.enable:=true
+
+# View RealSense topics
+ros2 topic list | grep camera
+
+# Echo camera info
+ros2 topic echo /camera/color/image_raw
+ros2 topic echo /camera/depth/image_rect_raw
+ros2 topic echo /camera/imu
+
+note change the base frame to camera_link

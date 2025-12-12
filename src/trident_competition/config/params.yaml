@@ -1,0 +1,53 @@
+# Zone A Controller Parameters
+zone_a_controller:
+  ros__parameters:
+    # PID gains for line following
+    kp: 0.8
+    ki: 0.01
+    kd: 0.3
+    
+    # Motor speeds (PWM 0-255)
+    base_speed: 150
+    max_speed: 200
+    
+    # Control loop rate (Hz)
+    update_rate: 50.0
+    
+    # IR sensor thresholds
+    black_threshold: 800
+    white_threshold: 200
+
+# Zone B Controller Parameters
+zone_b_controller:
+  ros__parameters:
+    # VSLAM and mapping
+    rotation_speed: 0.1  # rad/s for 360° scan
+    vslam_update_rate: 30.0  # Hz
+    
+    # Navigation distances (meters)
+    approach_distance_qr: 0.2    # 200mm from North wall
+    approach_distance_drop: 0.1   # 100mm from East wall
+    
+    # Tolerances
+    navigation_tolerance: 0.05      # 50mm
+    orientation_tolerance: 0.087    # ~5 degrees
+    
+    # Vision parameters
+    color_detection_attempts: 5
+    qr_detection_attempts: 5
+    
+    # Gripper timing
+    gripper_action_delay: 1.5  # seconds
+
+# Arduino Interface Parameters
+arduino_interface:
+  ros__parameters:
+    serial_port: '/dev/ttyACM0'
+    baud_rate: 115200
+    timeout: 1.0
+
+# Mission Manager Parameters
+mission_manager:
+  ros__parameters:
+    max_mission_time: 600.0  # seconds
+    status_update_rate: 5.0  # Hz
