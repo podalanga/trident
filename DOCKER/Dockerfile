@@ -32,6 +32,13 @@ RUN apt-get update \
  && apt-get install -y \
     ros-${ROS_DISTRO}-realsense2-camera \
     ros-${ROS_DISTRO}-realsense2-description \
+    ros-${ROS_DISTRO}-cv-bridge \
+    ros-${ROS_DISTRO}-image-transport \
+    ros-${ROS_DISTRO}-image-transport-plugins \
+    ros-${ROS_DISTRO}-diagnostic-updater \
+    ros-${ROS_DISTRO}-xacro \
+    ros-${ROS_DISTRO}-tf2-tools \
+    ros-${ROS_DISTRO}-tf-transformations \
     librealsense2-utils \
     librealsense2-dev \
  && rm -rf /var/lib/apt/lists/*
@@ -75,7 +82,12 @@ RUN python3 -m pip install --no-cache-dir \
     "numpy<2" \
     opencv-contrib-python \
     pyzbar \
-    pillow
+    pillow \
+    transforms3d
+
+# Add udev rules for RealSense (optional, but good practice if running privileged)
+RUN mkdir -p /etc/udev/rules.d \
+ && wget -O /etc/udev/rules.d/99-realsense-libusb.rules https://raw.githubusercontent.com/IntelRealSense/librealsense/master/config/99-realsense-libusb.rules
 
 # # Clone and build RPLidar SDK (optional, for additional driver support)
 # RUN mkdir -p ${WS_DIR}/src \

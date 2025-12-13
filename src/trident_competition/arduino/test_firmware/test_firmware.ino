@@ -19,14 +19,14 @@ const int MOTOR_LEFT_BIN2 = 8;
 
 // ============= CALIBRATION DATA =============
 // Values from your calibration test
-const int CAL_MIN[6] = {35,33,35,35,34,32};
-const int CAL_MAX[6] = {308,338,792,557,760,806};
+const int CAL_MIN[6] = {44, 42, 44, 43, 43, 41};
+const int CAL_MAX[6] = {335, 314, 439, 394, 374, 237};
 
 // ============= PID CONSTANTS =============
-// Start with these conservative values
-float Kp = 20.0;   // Controls how sharply it turns (Start: 20-30)
+// Tuned for better responsiveness
+float Kp = 45.0;   // Increased to make turns sharper
 float Ki = 0.0;    // Usually 0 for simple line following
-float Kd = 0.0;    // Dampens oscillation (Start: 5-15)
+float Kd = 12.0;   // Added to predict error and reduce oscillation
 
 int baseSpeed = 100;    // Safe starting speed (0-255)
 int maxSpeed = 255;    // Cap speed to prevent runaways
@@ -80,11 +80,13 @@ void loop() {
   setMotorSpeed(leftSpeed, rightSpeed);
   
   // Debug output
+  /*
   static unsigned long lastPrint = 0;
   if (millis() - lastPrint >= 200) {
     printDebugInfo(error, pidOutput, leftSpeed, rightSpeed);
     lastPrint = millis();
   }
+  */
 }
 
 // ============= SENSOR FUNCTIONS =============

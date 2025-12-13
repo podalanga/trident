@@ -29,6 +29,7 @@ class ZoneBController(Node):
         self.declare_parameter('approach_distance_drop', 0.1)  # meters (100mm)
         self.declare_parameter('navigation_tolerance', 0.05)  # meters (50mm)
         self.declare_parameter('orientation_tolerance', 0.087)  # radians (~5 degrees)
+        self.declare_parameter('pose_topic', '/rtabmap/localization_pose')
         
         # Get parameters
         self.rotation_speed = self.get_parameter('rotation_speed').value
@@ -36,6 +37,7 @@ class ZoneBController(Node):
         self.approach_distance_drop = self.get_parameter('approach_distance_drop').value
         self.nav_tolerance = self.get_parameter('navigation_tolerance').value
         self.orient_tolerance = self.get_parameter('orientation_tolerance').value
+        pose_topic = self.get_parameter('pose_topic').value
         
         # State machine
         self.state = 'idle'  # idle, initializing_vslam, mapping, detecting_colors, 
@@ -75,7 +77,7 @@ class ZoneBController(Node):
         self.depth_sub = self.create_subscription(
             Image, '/camera/depth/image_rect_raw', self.depth_callback, 10)
         self.camera_info_sub = self.create_subscription(
-            CameraInfo, '/camera/color/camera_info', self.camera_info_callback, 10)
+            CameraInfo, 'pose_topicself.camera_info_callback, 10)
         self.pose_sub = self.create_subscription(
             PoseStamped, '/rtabmap/localization_pose', self.pose_callback, 10)
         self.start_sub = self.create_subscription(
@@ -166,6 +168,7 @@ class ZoneBController(Node):
         elif self.state == 'detecting_colors':
             # Detect colored squares on East wall
             self.detect_east_wall_colors()
+
         
         elif self.state == 'detecting_qrs':
             # Detect QR codes on North wall
@@ -180,23 +183,32 @@ class ZoneBController(Node):
             pass
     
     def perform_360_mapping(self):
-        """Rotate 360° to build VSLAM map"""
-        # This is a simplified version - implement full rotation control
-        self.get_logger().info('Performing 360° rotation for mapping...')
-        
-        # Rotate slowly
-        twist = Twist()
-        twist.angular.z = self.rotation_speed
-        
-        # Rotate for ~360 degrees (2*pi radians)
+        """Rotate 360° to build VSLAM map (Non-blocking)"""
+        # Initialize mapping state if just started
+        if not hasattr(self, 'mapping_start_time'):
+            self.mapping_start_time = time.time()
+            self.get_logger().info('Starting 360° rotation for mapping...')
+            
+        # Calculate duration needed for 360 degrees
         duration = 2 * np.pi / self.rotation_speed
+        elapsed = time.time() - self.mapping_start_time
         
-        # In real implementation, track rotation and stop after 360°
-        # For now, proceed to next state after fixed duration
-        time.sleep(duration)
-        
-        twist.angular.z = 0.0
-        self.cmd_vel_pub.publish(twist)
+        if elapsed < duration:
+            # Continue rotating
+            twist = Twist()
+            twist.angular.z = self.rotation_speed
+            self.cmd_vel_pub.publish(twist)
+        else:
+            # Finished rotation
+            twist = Twist()
+            twist.angular.z = 0.0
+            self.cmd_vel_pub.publish(twist)
+            
+            self.get_logger().info('360° mapping complete')
+            # Clean up state variable
+            del self.mapping_start_time
+            # Transition to next state
+            self.state = 'detecting_colors'
         
         self.get_logger().info('360° mapping complete')
         self.state = 'detecting_colors'
@@ -304,37 +316,136 @@ class ZoneBController(Node):
     def navigate_to_qr(self):
         """Navigate to current QR code position"""
         self.get_logger().info(f'Navigating to {self.current_qr}...')
-        # Implement navigation logic here
-        # For now, simulate navigation
-        time.sleep(0.5)
+        
+        # Get target position from stored QR data
+        qr_data = self.north_wall_qrs[self.current_qr]
+        target_pos = qr_data['position']
+        
+        # Calculate approach point (20cm back from wall)
+        # Assuming North wall is at Y+, so we want to be at (x, y-0.2, z)
+        approach_x = target_pos[0]
+        approach_y = target_pos[1] - self.approach_distance_qr
+        
+        # Create navigation goal
+        goal = PoseStamped()
+        goal.header.frame_id = 'map'
+        goal.pose.position.x = approach_x
+        goal.pose.position.y = approach_y
+        goal.pose.orientation.z = 0.707  # Face North (approx 90 deg)
+        goal.pose.orientation.w = 0.707
+        
+        # In a real system, send this to Nav2 or move_base
+        # For this simplified controller, we'll just simulate arrival
+        
+        # Check if we are close enough
+        if self.current_pose:
+            curr_x = self.current_pose.pose.position.x
+            curr_y = self.current_pose.pose.position.y
+            dist = np.sqrt((curr_x - approach_x)**2 + (curr_y - approach_y)**2)
+            
+            if dist < self.nav_tolerance:
+                self.mission_phase = 'align_pickup'
+                return
+
+        # Simulate movement (replace with actual cmd_vel logic)
+        twist = Twist()
+        twist.linear.x = 0.1
+        self.cmd_vel_pub.publish(twist)
+        
+        # For simulation/testing without full nav stack:
+        time.sleep(0.5) 
         self.mission_phase = 'align_pickup'
     
     def align_for_pickup(self):
-        """Align robot for coin pickup"""
+        """Align robot for coin pickup using visual servoing"""
         self.get_logger().info(f'Aligning for pickup at {self.current_qr}...')
-        # Implement visual servoing alignment
-        time.sleep(0.5)
-        self.mission_phase = 'pickup'
+        
+        if self.rgb_image is None:
+            return
+
+        # Detect QR again for fine alignment
+        detections = self.qr_detector.detect_qr_codes(self.rgb_image, self.depth_image)
+        
+        target_qr = None
+        for det in detections:
+            if det['text'] == self.north_wall_qrs[self.current_qr]['text']:
+                target_qr = det
+                break
+        
+        if target_qr:
+            cx, cy = target_qr['centroid_2d']
+            img_center_x = self.rgb_image.shape[1] // 2
+            
+            # Simple P-controller for centering
+            error_x = cx - img_center_x
+            
+            twist = Twist()
+            if abs(error_x) > 20:  # Pixel tolerance
+                twist.angular.z = -0.002 * error_x
+                self.cmd_vel_pub.publish(twist)
+            else:
+                # Aligned
+                self.cmd_vel_pub.publish(Twist()) # Stop
+                self.mission_phase = 'pickup'
+        else:
+            # QR lost, maybe rotate slowly to find it?
+            pass
+            # For simulation, just proceed
+            self.mission_phase = 'pickup'
     
     def pickup_coin(self):
         """Pick up coin"""
         self.get_logger().info(f'Picking up coin at {self.current_qr}')
+        
+        # Move forward slightly to grab
+        twist = Twist()
+        twist.linear.x = 0.05
+        self.cmd_vel_pub.publish(twist)
+        time.sleep(1.0)
+        self.cmd_vel_pub.publish(Twist()) # Stop
+        
         self.send_gripper_command('close')
         time.sleep(1.5)
+        
+        # Move back
+        twist.linear.x = -0.05
+        self.cmd_vel_pub.publish(twist)
+        time.sleep(1.0)
+        self.cmd_vel_pub.publish(Twist())
+        
         self.mission_phase = 'navigate_to_drop'
     
     def navigate_to_drop(self):
         """Navigate to drop location"""
         drop_data = self.qr_to_drop_mapping[self.current_qr]
         self.get_logger().info(f'Navigating to drop zone: {drop_data["target_color"]}...')
-        # Implement navigation logic
+        
+        target_pos = drop_data['target_position']
+        
+        # Calculate approach point (10cm back from East wall)
+        # Assuming East wall is at X+, so we want (x-0.1, y, z)
+        approach_x = target_pos[0] - self.approach_distance_drop
+        approach_y = target_pos[1]
+        
+        # Create navigation goal
+        goal = PoseStamped()
+        goal.header.frame_id = 'map'
+        goal.pose.position.x = approach_x
+        goal.pose.position.y = approach_y
+        goal.pose.orientation.z = 0.0  # Face East (0 deg)
+        goal.pose.orientation.w = 1.0
+        
+        # Simulate arrival
         time.sleep(0.5)
         self.mission_phase = 'align_drop'
     
     def align_for_drop(self):
         """Align robot for coin drop"""
         self.get_logger().info('Aligning for drop...')
-        # Implement alignment logic
+        
+        # Visual servoing on colored square could go here
+        # For now, assume navigation was accurate enough
+        
         time.sleep(0.5)
         self.mission_phase = 'drop'
     
