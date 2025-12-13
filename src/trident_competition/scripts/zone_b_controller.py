@@ -3,6 +3,7 @@
 
 import rclpy
 from rclpy.node import Node
+from rcl_interfaces.msg import SetParametersResult
 from std_msgs.msg import String, Bool
 from sensor_msgs.msg import Image, CameraInfo
 from geometry_msgs.msg import PoseStamped, Twist
@@ -83,7 +84,11 @@ class ZoneBController(Node):
         # Control timer
         self.timer = self.create_timer(0.1, self.control_loop)
         
+        # Add parameter callback for runtime tuning
+        self.add_on_set_parameters_callback(self.parameter_callback)
+        
         self.get_logger().info('Zone B Controller initialized')
+        self.get_logger().info('Runtime parameter tuning enabled')
     
     def rgb_callback(self, msg):
         """Callback for RGB image"""
@@ -119,6 +124,27 @@ class ZoneBController(Node):
         if msg.data and self.state == 'idle':
             self.get_logger().info('Zone B mission started')
             self.state = 'initializing_vslam'
+    
+    def parameter_callback(self, params):
+        """Handle runtime parameter changes"""
+        for param in params:
+            if param.name == 'rotation_speed':
+                self.rotation_speed = param.value
+                self.get_logger().info(f'Updated rotation speed to {param.value} rad/s')
+            elif param.name == 'approach_distance_qr':
+                self.approach_distance_qr = param.value
+                self.get_logger().info(f'Updated QR approach distance to {param.value} m')
+            elif param.name == 'approach_distance_drop':
+                self.approach_distance_drop = param.value
+                self.get_logger().info(f'Updated drop approach distance to {param.value} m')
+            elif param.name == 'navigation_tolerance':
+                self.nav_tolerance = param.value
+                self.get_logger().info(f'Updated navigation tolerance to {param.value} m')
+            elif param.name == 'orientation_tolerance':
+                self.orient_tolerance = param.value
+                self.get_logger().info(f'Updated orientation tolerance to {param.value} rad')
+        
+        return SetParametersResult(successful=True)
     
     def control_loop(self):
         """Main control loop"""

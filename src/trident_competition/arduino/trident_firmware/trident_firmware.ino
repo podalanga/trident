@@ -17,20 +17,20 @@
 // IR Sensors (Analog)
 const int IR_PINS[6] = {A0, A1, A2, A3, A4, A5};
 
-// Motor Control
-const int MOTOR_LEFT_PWM = 5;      // PWM pin for left motor speed
-const int MOTOR_LEFT_DIR1 = 22;    // Direction pin 1
-const int MOTOR_LEFT_DIR2 = 23;    // Direction pin 2
+// Motor Control (PWM on direction pins - no separate PWM)
+// Right Motor
+const int MOTOR_RIGHT_AIN1 = 5;    // PWM direction pin 1
+const int MOTOR_RIGHT_AIN2 = 6;    // PWM direction pin 2
 
-const int MOTOR_RIGHT_PWM = 6;     // PWM pin for right motor speed
-const int MOTOR_RIGHT_DIR1 = 24;   // Direction pin 1
-const int MOTOR_RIGHT_DIR2 = 25;   // Direction pin 2
+// Left Motor
+const int MOTOR_LEFT_BIN1 = 7;     // PWM direction pin 1
+const int MOTOR_LEFT_BIN2 = 8;     // PWM direction pin 2
 
 // Gripper Servo
 const int GRIPPER_PIN = 9;
 
 // Buzzer
-const int BUZZER_PIN = 8;
+const int BUZZER_PIN = 10;
 
 // ============= CONSTANTS =============
 const int SERIAL_BAUD = 115200;
@@ -56,12 +56,10 @@ void setup() {
   }
   
   // Initialize motor pins
-  pinMode(MOTOR_LEFT_PWM, OUTPUT);
-  pinMode(MOTOR_LEFT_DIR1, OUTPUT);
-  pinMode(MOTOR_LEFT_DIR2, OUTPUT);
-  pinMode(MOTOR_RIGHT_PWM, OUTPUT);
-  pinMode(MOTOR_RIGHT_DIR1, OUTPUT);
-  pinMode(MOTOR_RIGHT_DIR2, OUTPUT);
+  pinMode(MOTOR_RIGHT_AIN1, OUTPUT);
+  pinMode(MOTOR_RIGHT_AIN2, OUTPUT);
+  pinMode(MOTOR_LEFT_BIN1, OUTPUT);
+  pinMode(MOTOR_LEFT_BIN2, OUTPUT);
   
   // Initialize gripper
   gripperServo.attach(GRIPPER_PIN);
@@ -157,34 +155,33 @@ void handleMotorCommand(JsonDocument& doc) {
   const char* rightDir = doc["right_direction"] | "forward";
   
   // Set left motor
-  setMotor(MOTOR_LEFT_PWM, MOTOR_LEFT_DIR1, MOTOR_LEFT_DIR2, 
+  setMotor(MOTOR_LEFT_BIN1, MOTOR_LEFT_BIN2,
            leftSpeed, strcmp(leftDir, "forward") == 0);
   
   // Set right motor
-  setMotor(MOTOR_RIGHT_PWM, MOTOR_RIGHT_DIR1, MOTOR_RIGHT_DIR2,
+  setMotor(MOTOR_RIGHT_AIN1, MOTOR_RIGHT_AIN2,
            rightSpeed, strcmp(rightDir, "forward") == 0);
 }
 
-void setMotor(int pwmPin, int dir1Pin, int dir2Pin, int speed, bool forward) {
+void setMotor(int ain1Pin, int ain2Pin, int speed, bool forward) {
   // Clamp speed to 0-255
   speed = constrain(speed, 0, 255);
   
-  // Set direction
+  // Set direction and speed via PWM on direction pins
   if (forward) {
-    digitalWrite(dir1Pin, HIGH);
-    digitalWrite(dir2Pin, LOW);
+    analogWrite(ain1Pin, speed);
+    analogWrite(ain2Pin, 0);
   } else {
-    digitalWrite(dir1Pin, LOW);
-    digitalWrite(dir2Pin, HIGH);
+    analogWrite(ain1Pin, 0);
+    analogWrite(ain2Pin, speed);
   }
-  
-  // Set speed
-  analogWrite(pwmPin, speed);
 }
 
 void stopMotors() {
-  analogWrite(MOTOR_LEFT_PWM, 0);
-  analogWrite(MOTOR_RIGHT_PWM, 0);
+  analogWrite(MOTOR_RIGHT_AIN1, 0);
+  analogWrite(MOTOR_RIGHT_AIN2, 0);
+  analogWrite(MOTOR_LEFT_BIN1, 0);
+  analogWrite(MOTOR_LEFT_BIN2, 0);
 }
 
 // ============= GRIPPER CONTROL =============

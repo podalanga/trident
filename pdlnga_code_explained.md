@@ -1,41 +1,5 @@
 Optimizing tool selection...I'll provide a detailed breakdown of every file in the codebase. Let me start by reading through each component systematically. 
 
-Read [](file:///home/podalanga/Codes/ros/tn_skills/trident/src/trident_competition/package.xml)
-
-Read [](file:///home/podalanga/Codes/ros/tn_skills/trident/src/trident_competition/CMakeLists.txt)
-
-Read [](file:///home/podalanga/Codes/ros/tn_skills/trident/src/trident_competition/setup.py)
-
-Read [](file:///home/podalanga/Codes/ros/tn_skills/trident/src/trident_competition/config/params.yaml)
-
-Read [](file:///home/podalanga/Codes/ros/tn_skills/trident/src/trident_competition/config/params.py)
-
-Read [](file:///home/podalanga/Codes/ros/tn_skills/trident/src/trident_competition/scripts/mission_manager.py)
-
-Read [](file:///home/podalanga/Codes/ros/tn_skills/trident/src/trident_competition/scripts/zone_a_controller.py)
-
-Read [](file:///home/podalanga/Codes/ros/tn_skills/trident/src/trident_competition/trident_competition/pid_controller.py)
-
-Read [](file:///home/podalanga/Codes/ros/tn_skills/trident/src/trident_competition/scripts/arduino_interface.py)
-
-Read [](file:///home/podalanga/Codes/ros/tn_skills/trident/src/trident_competition/scripts/zone_b_controller.py#1-1), lines 1 to 300
-
-Read [](file:///home/podalanga/Codes/ros/tn_skills/trident/src/trident_competition/scripts/zone_b_controller.py#300-300), lines 300 to 374
-
-Read [](file:///home/podalanga/Codes/ros/tn_skills/trident/src/trident_competition/trident_competition/vision_detection.py#1-1), lines 1 to 250
-
-Read [](file:///home/podalanga/Codes/ros/tn_skills/trident/src/trident_competition/trident_competition/vision_detection.py#250-250), lines 250 to 276
-
-Read [](file:///home/podalanga/Codes/ros/tn_skills/trident/src/trident_competition/arduino/trident_firmware/trident_firmware.ino)
-
-Now let me read the launch files to complete the explanation: 
-
-Read [](file:///home/podalanga/Codes/ros/tn_skills/trident/src/trident_competition/launch/competition.launch.py#1-1), lines 1 to 100
-
-Read [](file:///home/podalanga/Codes/ros/tn_skills/trident/src/trident_competition/launch/rtabmap.launch.py#1-1), lines 1 to 100
-
-Perfect! Now let me provide you with a comprehensive, piece-by-piece breakdown of the entire codebase:
-
 ---
 
 # **Complete Codebase Breakdown - Piece by Piece**
@@ -167,7 +131,7 @@ LINE_FOLLOW_PID = {
 
 ---
 
-## **🤖 ROS2 Nodes - The Brain**
+## ** ROS2 Nodes - The Brain**
 
 ### **6. `scripts/mission_manager.py`** - Mission Coordinator
 

@@ -3,6 +3,7 @@
 
 import rclpy
 from rclpy.node import Node
+from rcl_interfaces.msg import SetParametersResult
 from std_msgs.msg import String, Int32MultiArray, Bool
 from geometry_msgs.msg import Twist
 import json
@@ -63,9 +64,13 @@ class ZoneAController(Node):
         # Control loop timer
         self.timer = self.create_timer(self.dt, self.control_loop)
         
+        # Add parameter callback for runtime tuning
+        self.add_on_set_parameters_callback(self.parameter_callback)
+        
         self.get_logger().info('Zone A Controller initialized')
         self.get_logger().info(f'PID gains - Kp: {kp}, Ki: {ki}, Kd: {kd}')
         self.get_logger().info(f'Base speed: {self.base_speed}, Max speed: {self.max_speed}')
+        self.get_logger().info('Runtime parameter tuning enabled')
     
     def ir_callback(self, msg):
         """Callback for IR sensor data from Arduino"""
@@ -76,6 +81,31 @@ class ZoneAController(Node):
         if msg.data and self.state == 'idle':
             self.get_logger().info('Zone A mission started')
             self.state = 'waiting_start'
+    
+    def parameter_callback(self, params):
+        """Handle runtime parameter changes"""
+        for param in params:
+            if param.name == 'kp':
+                self.pid.kp = param.value
+                self.get_logger().info(f'Updated Kp to {param.value}')
+            elif param.name == 'ki':
+                self.pid.ki = param.value
+                self.get_logger().info(f'Updated Ki to {param.value}')
+            elif param.name == 'kd':
+                self.pid.kd = param.value
+                self.get_logger().info(f'Updated Kd to {param.value}')
+            elif param.name == 'base_speed':
+                self.base_speed = param.value
+                self.get_logger().info(f'Updated base speed to {param.value}')
+            elif param.name == 'max_speed':
+                self.max_speed = param.value
+                self.get_logger().info(f'Updated max speed to {param.value}')
+            elif param.name == 'update_rate':
+                # Update rate requires timer recreation
+                self.dt = 1.0 / param.value
+                self.get_logger().info(f'Updated control rate to {param.value} Hz')
+        
+        return SetParametersResult(successful=True)
     
     def check_start_square(self) -> bool:
         """Check if robot is positioned in start square (all sensors see black)"""
