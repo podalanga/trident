@@ -30,7 +30,7 @@ const int MOTOR_LEFT_BIN2 = 8;     // PWM direction pin 2
 const int GRIPPER_PIN = 9;
 
 // Buzzer
-const int BUZZER_PIN = 10;
+const int BUZZER_PIN = 3;
 
 // ============= CONSTANTS =============
 const int SERIAL_BAUD = 115200;
@@ -39,6 +39,11 @@ const int GRIPPER_CLOSE_ANGLE = 30;
 const int GRIPPER_OPEN_ANGLE = 90;
 const int BUZZER_DURATION = 300;  // ms
 const int BUZZER_PAUSE = 500;     // ms
+
+// ============= CALIBRATION DATA =============
+// Values from calibration test
+const int CAL_MIN[6] = {44, 42, 44, 43, 43, 41};
+const int CAL_MAX[6] = {335, 314, 439, 394, 374, 237};
 
 // ============= GLOBAL VARIABLES =============
 Servo gripperServo;
@@ -94,7 +99,10 @@ void loop() {
 void readAndSendIRSensors() {
   // Read all IR sensors
   for (int i = 0; i < 6; i++) {
-    irSensorValues[i] = analogRead(IR_PINS[i]);
+    int raw = analogRead(IR_PINS[i]);
+    // Map raw reading to 0-1000 based on calibration
+    int calibrated = map(raw, CAL_MIN[i], CAL_MAX[i], 0, 1000);
+    irSensorValues[i] = constrain(calibrated, 0, 1000);
   }
   
   // Send as JSON

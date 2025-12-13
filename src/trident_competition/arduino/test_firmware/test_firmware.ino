@@ -12,7 +12,7 @@ const int IR_PINS[6] = {A0, A1, A2, A3, A4, A5};
 // Motor Pins
 // NOTE: On Arduino Uno, Pins 7 & 8 are NOT PWM. 
 // If using Uno, move Left Motor to pins 3, 9, 10, or 11 for speed control.
-const int MOTOR_RIGHT_AIN1 = 5; 
+const int MOTOR_RIGHT_AIN1 = 5; z
 const int MOTOR_RIGHT_AIN2 = 6;
 const int MOTOR_LEFT_BIN1 = 7;   
 const int MOTOR_LEFT_BIN2 = 8;
