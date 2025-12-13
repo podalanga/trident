@@ -24,11 +24,11 @@ const int CAL_MAX[6] = {308,338,792,557,760,806};
 
 // ============= PID CONSTANTS =============
 // Start with these conservative values
-float Kp = 25.0;   // Controls how sharply it turns (Start: 20-30)
+float Kp = 20.0;   // Controls how sharply it turns (Start: 20-30)
 float Ki = 0.0;    // Usually 0 for simple line following
 float Kd = 0.0;    // Dampens oscillation (Start: 5-15)
 
-int baseSpeed = 178;    // Safe starting speed (0-255)
+int baseSpeed = 100;    // Safe starting speed (0-255)
 int maxSpeed = 255;    // Cap speed to prevent runaways
 
 // ============= GLOBAL VARIABLES =============
