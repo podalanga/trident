@@ -10,3 +10,8 @@ __pycache__/
 *.swo
 *~
 .DS_Store
+
+# Core dumps and large files
+core
+core.*
+*.core
