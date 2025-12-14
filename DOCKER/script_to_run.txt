@@ -1,11 +1,17 @@
 # ==================== 1. BUILD DOCKER IMAGE ====================
-# Run this from the root of your workspace (/home/podalanga/Codes/ros/tn_skills/trident)
+# Run this from the root of your workspace (/home/thakkali/Codes/trident)
 docker build -t tn_skills -f DOCKER/Dockerfile .
+
+# Verify RealSense on HOST before running container:
+# lsusb | grep Intel
+# Should show: Intel Corp. Intel(R) RealSense(TM) Depth Camera 435i
 
 
 # ==================== 2. RUN CONTAINER ====================
 # Option B: Mount all devices (Easiest for development)
 # This mounts your current code into the container so you can edit on host and run in container
+# Note: For Raspberry Pi 4, we use --privileged and mount /dev to access GPIO and peripherals.
+# IMPORTANT: Removed --user flag to fix RealSense camera permission issues
 docker run -it --rm \
   --name trident_container \
   --privileged \
@@ -13,14 +19,13 @@ docker run -it --rm \
   --network host \
   --ipc=host \
   --pid=host \
-  --volume /home/podalanga/Codes/ros/tn_skills/trident:/home/ros/trident:rw \
+  --volume /home/thakkali/Codes/trident:/home/ros/trident:rw \
   --env DISPLAY=$DISPLAY \
   --env QT_X11_NO_MITSHM=1 \
   --env ROS_DOMAIN_ID=0 \
   --env RMW_IMPLEMENTATION=rmw_cyclonedds_cpp \
   --volume /tmp/.X11-unix:/tmp/.X11-unix:rw \
   --volume $HOME/.Xauthority:/home/ros/.Xauthority:rw \
-  --user $(id -u):$(id -g) \
   tn_skills
 
 # ==================== 3. INSIDE CONTAINER SETUP ====================
@@ -37,7 +42,11 @@ source install/setup.bash
 # No Lidar is required.
 ros2 launch trident_competition zone_b_test.launch.py
 
-# --- B. Test RealSense Camera Only ---
+# --- B. Test Mapping Only (Best for debugging Camera) ---
+# Use this to verify the camera and mapping are working before running the full Zone B test.
+ros2 launch trident_competition mapping_test.launch.py
+
+# --- C. Test RealSense Camera Only ---
 # Verify camera is working before running Zone B test
 ros2 launch realsense2_camera rs_launch.py \
    enable_depth:=true \
@@ -51,3 +60,65 @@ ros2 launch realsense2_camera rs_launch.py \
 
 # --- D. View in RViz ---
 # ros2 run rviz2 rviz2
+
+
+# ==================== ADDITIONAL DEVICE TESTING ====================
+
+# ==================== RPLIDAR A1 (if needed separately) ====================
+# Test RPLidar manually with separate commands (need two terminals)
+
+# Terminal 1: Start RPLidar node
+ros2 run rplidar_ros rplidar_composition --ros-args \
+   -p serial_port:=/dev/ttyUSB0 \
+   -p serial_baudrate:=115200 \
+   -p frame_id:=laser \
+   -p angle_compensate:=true
+
+# Terminal 2: Publish static transform (map -> laser frame)
+ros2 run tf2_ros static_transform_publisher 0 0 0 0 0 0 map laser
+
+# View RPLidar topics
+ros2 topic list | grep scan
+ros2 topic echo /scan
+
+
+# ==================== INTEL REALSENSE D435i (manual testing) ====================
+
+# Test RealSense camera detection
+rs-enumerate-devices
+
+# Launch RealSense camera node (basic)
+ros2 launch realsense2_camera rs_launch.py
+
+# Launch RealSense with full settings (depth + RGB + IMU + pointcloud)
+ros2 launch realsense2_camera rs_launch.py \
+  enable_depth:=true \
+  enable_color:=true \
+  enable_infra1:=true \
+  enable_infra2:=true \
+  enable_gyro:=true \
+  enable_accel:=true \
+  unite_imu_method:=1 \
+  pointcloud.enable:=true
+
+# If you get TF errors in RViz2, publish a transform (in separate terminal):
+ros2 run tf2_ros static_transform_publisher 0 0 0 0 0 0 map camera_link
+
+# View RealSense topics
+ros2 topic list | grep camera
+ros2 topic echo /camera/color/image_raw
+ros2 topic echo /camera/depth/image_rect_raw
+ros2 topic echo /camera/imu
+
+
+# ==================== TROUBLESHOOTING ====================
+
+# If RealSense not detected:
+# 1. Check USB connection on host: lsusb | grep Intel
+# 2. Restart udev on host: sudo udevadm control --reload-rules && sudo udevadm trigger
+# 3. Try unplugging and replugging the camera
+
+# If RPLidar not detected:
+# 1. Check USB connection: ls -l /dev/ttyUSB*
+# 2. Check permissions: sudo chmod 666 /dev/ttyUSB0
+# 3. Test with: sudo minicom -D /dev/ttyUSB0 -b 115200

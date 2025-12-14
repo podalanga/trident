@@ -77,7 +77,7 @@ class ZoneBController(Node):
         self.depth_sub = self.create_subscription(
             Image, '/camera/depth/image_rect_raw', self.depth_callback, 10)
         self.camera_info_sub = self.create_subscription(
-            CameraInfo, 'pose_topicself.camera_info_callback, 10)
+            CameraInfo, '/camera/color/camera_info', self.camera_info_callback, 10)
         self.pose_sub = self.create_subscription(
             PoseStamped, '/rtabmap/localization_pose', self.pose_callback, 10)
         self.start_sub = self.create_subscription(

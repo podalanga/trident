@@ -67,6 +67,9 @@ RUN apt-get update \
     ros-${ROS_DISTRO}-nav2-bringup \
     ros-${ROS_DISTRO}-robot-localization \
     ros-${ROS_DISTRO}-rtabmap-ros \
+    ros-${ROS_DISTRO}-rtabmap-slam \
+    ros-${ROS_DISTRO}-rtabmap-odom \
+    ros-${ROS_DISTRO}-rtabmap-viz \
     ros-${ROS_DISTRO}-rtabmap \
  && rm -rf /var/lib/apt/lists/*
 
