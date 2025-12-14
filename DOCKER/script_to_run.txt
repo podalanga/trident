@@ -13,7 +13,7 @@ docker build -t tn_skills -f DOCKER/Dockerfile .
 # Note: For Raspberry Pi 4, we use --privileged and mount /dev to access GPIO and peripherals.
 # IMPORTANT: Removed --user flag to fix RealSense camera permission issues
 docker run -it --rm \
-  --name trident_container \
+  --name trident_container_2 \
   --privileged \
   --volume /dev:/dev \
   --network host \
@@ -26,7 +26,9 @@ docker run -it --rm \
   --env RMW_IMPLEMENTATION=rmw_cyclonedds_cpp \
   --volume /tmp/.X11-unix:/tmp/.X11-unix:rw \
   --volume $HOME/.Xauthority:/home/ros/.Xauthority:rw \
-  tn_skills
+  ros_realsense_pi
+
+  or tn_skills
 
 # ==================== 3. INSIDE CONTAINER SETUP ====================
 # Once inside the container, run these commands to build and setup:
