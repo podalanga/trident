@@ -89,6 +89,8 @@ def generate_launch_description():
             'align_depth.enable': 'true',
             'enable_gyro': 'true',
             'enable_accel': 'true',
+            # NOTE: realsense2_camera expects an integer in range [0, 2]
+            # 0=none, 1=copy, 2=linear_interpolation
             'unite_imu_method': '1'
         }.items(),
         condition=IfCondition(LaunchConfiguration('enable_camera'))

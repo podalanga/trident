@@ -33,6 +33,11 @@ def generate_launch_description():
         'subscribe_scan': False,
         'use_sim_time': LaunchConfiguration('use_sim_time'),
         'approx_sync': True,
+
+        # Synchronization/buffering (helps when topic rates/latency differ)
+        'topic_queue_size': 30,
+        'sync_queue_size': 30,
+        'approx_sync_max_interval': 0.05,
         
         # RTAB-Map core parameters
         'Mem/IncrementalMemory': 'true',

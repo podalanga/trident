@@ -1,4 +1,10 @@
-"""Launch file for testing Zone A only"""
+"""Launch file for testing Zone A only - Updated with test_firmware calibration
+Modifications based on test_firmware:
+- Updated PID parameters (Kp=45.0, Ki=0.0, Kd=12.0)
+- Improved calibrated sensor processing
+- Enhanced line following algorithm
+- Better end square detection
+"""
 
 from launch import LaunchDescription
 from launch_ros.actions import Node
@@ -19,13 +25,15 @@ def generate_launch_description():
         'params.yaml'
     ])
     
-    # Zone A Controller Node
+    # Zone A Controller Node - Updated with test_firmware calibration
     zone_a_controller = Node(
         package='trident_competition',
         executable='zone_a_controller.py',
         name='zone_a_controller',
         parameters=[params_file],
-        output='screen'
+        output='screen',
+        emulate_tty=True,  # Better terminal output formatting
+        arguments=['--ros-args', '--log-level', 'info']
     )
     
     # Arduino Interface Node
@@ -34,7 +42,9 @@ def generate_launch_description():
         executable='arduino_interface.py',
         name='arduino_interface',
         parameters=[params_file],
-        output='screen'
+        output='screen',
+        emulate_tty=True,  # Better terminal output formatting
+        arguments=['--ros-args', '--log-level', 'info']
     )
     
     return LaunchDescription([

@@ -23,9 +23,11 @@ def generate_launch_description():
             'enable_infra1': 'false',
             'enable_infra2': 'false',
             'align_depth.enable': 'true',
-            'enable_gyro': 'false',
-            'enable_accel': 'false',
-            'unite_imu_method': '0',
+            'enable_gyro': 'true',
+            'enable_accel': 'true',
+            # NOTE: realsense2_camera expects an integer in range [0, 2]
+            # 0=none, 1=copy, 2=linear_interpolation
+            'unite_imu_method': '1',
             'depth_module.profile': '640x480x30',
             'rgb_camera.profile': '640x480x30',
             'initial_reset': 'false'

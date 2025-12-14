@@ -18,12 +18,12 @@ class ZoneAController(Node):
     def __init__(self):
         super().__init__('zone_a_controller')
         
-        # Parameters
-        self.declare_parameter('kp', 0.8)
-        self.declare_parameter('ki', 0.01)
-        self.declare_parameter('kd', 0.3)
-        self.declare_parameter('base_speed', 150)
-        self.declare_parameter('max_speed', 200)
+        # Parameters - Updated based on test_firmware calibration
+        self.declare_parameter('kp', 45.0)  # Increased for sharper turns
+        self.declare_parameter('ki', 0.0)   # Usually 0 for simple line following
+        self.declare_parameter('kd', 12.0)  # Added to predict error and reduce oscillation
+        self.declare_parameter('base_speed', 100)  # Safe starting speed
+        self.declare_parameter('max_speed', 255)   # Cap speed to prevent runaways
         self.declare_parameter('update_rate', 50.0)  # Hz
         
         # Get parameters
@@ -38,9 +38,15 @@ class ZoneAController(Node):
         self.pid = PIDController(kp, ki, kd)
         self.dt = 1.0 / update_rate
         
+        # Calibration constants from test_firmware
+        self.cal_min = [44, 42, 44, 43, 43, 41]
+        self.cal_max = [335, 314, 439, 394, 374, 237]
+        
         # State machine
         self.state = 'idle'  # idle, waiting_start, line_following, aligning, complete
         self.sensor_values = [0] * 6
+        self.calibrated_values = [0] * 6
+        self.previous_error = 0.0
         
         # Publishers
         self.motor_cmd_pub = self.create_publisher(String, 'arduino/motor_command', 10)
@@ -75,6 +81,8 @@ class ZoneAController(Node):
     def ir_callback(self, msg):
         """Callback for IR sensor data from Arduino"""
         self.sensor_values = msg.data
+        # Calibrate sensor values based on test_firmware logic
+        self.calibrate_sensors()
     
     def start_callback(self, msg):
         """Callback to start Zone A mission"""
@@ -107,10 +115,50 @@ class ZoneAController(Node):
         
         return SetParametersResult(successful=True)
     
+    def calibrate_sensors(self):
+        """Calibrate raw sensor values to 0-1000 range based on test_firmware"""
+        for i in range(6):
+            if i < len(self.sensor_values):
+                raw = self.sensor_values[i]
+                # Map raw reading to 0-1000 based on calibration
+                calibrated = self.map_value(raw, self.cal_min[i], self.cal_max[i], 0, 1000)
+                self.calibrated_values[i] = max(0, min(1000, calibrated))
+    
+    def map_value(self, value, from_low, from_high, to_low, to_high):
+        """Map a value from one range to another (Arduino map equivalent)"""
+        return (value - from_low) * (to_high - to_low) // (from_high - from_low) + to_low
+    
+    def calculate_calibrated_line_error(self):
+        """Calculate line position error using calibrated values from test_firmware"""
+        weighted_sum = 0
+        total_value = 0
+        
+        # Standard Weighted Average
+        for i in range(6):
+            weighted_sum += self.calibrated_values[i] * i * 1000  # Multiply by 1000 for precision
+            total_value += self.calibrated_values[i]
+        
+        # Dead reckoning: If we lose the line, keep turning in the direction of the last known error
+        if total_value < 500:
+            if self.previous_error > 0:
+                return 3.0  # Hard right
+            if self.previous_error < 0:
+                return -3.0  # Hard left
+            return 0.0
+        
+        # Result is 0 to 5000, Center is 2500
+        position = weighted_sum / total_value
+        
+        # Map to -2.5 to +2.5 for easier PID math
+        error = (position - 2500) / 1000.0
+        self.previous_error = error
+        
+        return error
+    
     def check_start_square(self) -> bool:
         """Check if robot is positioned in start square (all sensors see black)"""
         threshold = 800
-        return all(v > threshold for v in self.sensor_values)
+        return all(v > threshold for v in self.calibrated_values)
     
     def control_loop(self):
         """Main control loop"""
@@ -127,16 +175,16 @@ class ZoneAController(Node):
                 self.pid.reset()
         
         elif self.state == 'line_following':
-            # Check for end square first
-            if detect_end_square(self.sensor_values):
+            # Check for end square first (all sensors detect black)
+            if self.detect_end_square():
                 self.get_logger().info('End square detected!')
                 self.stop_motors()
                 self.trigger_buzzer('single')
                 self.state = 'aligning'
                 return
             
-            # Calculate line position error
-            error = calculate_line_position_error(self.sensor_values)
+            # Calculate line position error using calibrated values
+            error = self.calculate_calibrated_line_error()
             
             # Compute PID output
             pid_output = self.pid.compute(error, self.dt)
@@ -155,6 +203,11 @@ class ZoneAController(Node):
         elif self.state == 'aligning':
             # Alignment procedure - move to right edge of square
             self.align_for_zone_b()
+    
+    def detect_end_square(self):
+        """Detect end square using calibrated sensor values"""
+        threshold = 800  # High threshold for black detection
+        return all(v > threshold for v in self.calibrated_values)
     
     def align_for_zone_b(self):
         """Align robot at right edge of black square for Zone B entry"""

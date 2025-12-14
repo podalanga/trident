@@ -26,9 +26,7 @@ docker run -it --rm \
   --env RMW_IMPLEMENTATION=rmw_cyclonedds_cpp \
   --volume /tmp/.X11-unix:/tmp/.X11-unix:rw \
   --volume $HOME/.Xauthority:/home/ros/.Xauthority:rw \
-  ros_realsense_pi
-
-  or tn_skills
+  ros_realsense_pi:latest
 
 # ==================== 3. INSIDE CONTAINER SETUP ====================
 # Once inside the container, run these commands to build and setup:

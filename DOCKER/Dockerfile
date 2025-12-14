@@ -73,10 +73,12 @@ RUN apt-get update \
     ros-${ROS_DISTRO}-rtabmap \
  && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Install Python dependencies and zbar for QR code detection
 RUN apt-get update && apt-get install -y \
     python3-pip \
     python3-opencv \
+    libzbar0 \
+    zbar-tools \
  && rm -rf /var/lib/apt/lists/*
 
 # Install Python packages for the competition

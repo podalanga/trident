@@ -21,7 +21,7 @@ class PIDController:
     
     def compute(self, error: float, dt: float) -> float:
         """
-        Compute PID control output
+        Compute PID control output - Updated based on test_firmware logic
         
         Args:
             error: Current error value
@@ -30,21 +30,22 @@ class PIDController:
         Returns:
             Control output value
         """
-        # Integral term with anti-windup
+        # Proportional term
+        P = self.kp * error
+        
+        # Integral term with improved anti-windup (constrain to smaller range)
         self.integral += error * dt
-        self.integral = max(min(self.integral, self.max_integral), -self.max_integral)
+        self.integral = max(min(self.integral, 50.0), -50.0)  # Tighter constraint
+        I = self.ki * self.integral
         
-        # Derivative term
+        # Derivative term with zero-division protection
+        D = 0.0
         if dt > 0:
-            derivative = (error - self.previous_error) / dt
-        else:
-            derivative = 0.0
-        
-        # PID output
-        output = (self.kp * error) + (self.ki * self.integral) + (self.kd * derivative)
+            D = self.kd * (error - self.previous_error) / dt
         
         self.previous_error = error
-        return output
+        
+        return P + I + D
     
     def reset(self):
         """Reset controller state"""
